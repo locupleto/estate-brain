@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "estate-brain"
+version = "0.1.0"
+description = "Provider-agnostic LLM layer for the estate: task contract, engines, golden-turn evals"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+brain = "estate_brain.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["estate_brain*"]

@@ -1,0 +1,158 @@
+# Golden turns: real production turns from the mini's Claude Code transcripts,
+# picked 2026-11-01 from a catalogue of ~4,400 recorded turns. Only ids here;
+# the captured content (prompts, replies, memory snapshots) lives in
+# ~/.estate-brain/cases/ and is never committed.
+#
+# contract: wrapper-json  final reply is a JSON action {action, message, ...}
+#           wrapper-any   JSON action or plain text (heartbeats, reflections)
+#           door          Sentinel verdict, text starting "DOOR: <decision>"
+#           structured    StructuredOutput (Bastion/Observatory --json-schema)
+#           bare-json     JSON object in the reply text, no tools
+# expect:   tool families the original turn used and a replay should too
+#           ("edit:memory", "mcp:<server>", "web")
+
+[defaults]
+host = "mini"
+remote_base = "/Users/urban/Public"
+local_base = "/Volumes/Work/development/projects/git"
+
+# Turns whose reference ACTED through the shell (Jarvis is an admin bot:
+# calendar bookings via bin/calctl, mail) are never golden cases: a faithful
+# replay would act again. Replays run without shell, mail or live estate
+# access; the Claude control runs under the same conditions.
+
+[[case]]
+id = "jarvis-memory"
+repo = "the-armory"
+transcript = "ae46ae0c-563b-4b99-af9a-eaf9cdb6bf93"
+contract = "wrapper-json"
+
+[[case]]
+id = "jarvis-market"
+repo = "the-armory"
+transcript = "0f74a220-ef50-4217-8fd5-f3cc898c74f5"
+contract = "wrapper-json"
+expect = ["mcp:finance|mcp:marketdata-db"]
+
+[[case]]
+id = "jarvis-story"
+repo = "the-armory"
+transcript = "af1e9c5e-6e88-4f46-81ed-cdbdf504eb78"
+contract = "wrapper-json"
+
+[[case]]
+id = "jarvis-cant-find"
+repo = "the-armory"
+transcript = "4e6cbb16-1e3d-42f7-af78-81dd4e335770"
+contract = "wrapper-json"
+
+[[case]]
+id = "jarvis-heartbeat"
+repo = "the-armory"
+transcript = "e5cb2059-27d2-4b40-991b-e916be3c6883"
+contract = "wrapper-any"
+
+[[case]]
+id = "jarvis-heartbeat-unchanged"
+repo = "the-armory"
+transcript = "1c303d88-78a4-48c4-8771-57bc4e23db95"
+contract = "wrapper-any"
+
+[[case]]
+id = "jarvis-reflection"
+repo = "the-armory"
+transcript = "c5f2a4d4-d871-4ef5-a27c-977e0e2fead0"
+contract = "wrapper-any"
+expect = ["edit:memory"]
+
+[[case]]
+id = "sentinel-telegram"
+repo = "the-armory"
+transcript = "677006ee-64d1-4f48-b980-ac99ab194188"
+contract = "door"
+
+[[case]]
+id = "sentinel-ignore"
+repo = "the-armory"
+transcript = "bc98f4a6-f1bc-4647-93a4-7439ce1df238"
+contract = "door"
+
+[[case]]
+id = "gordon-chat"
+repo = "trading-lab-v2"
+transcript = "e6c455ad-0e85-4d5a-9195-82eb4bf79ae6"
+contract = "wrapper-json"
+
+[[case]]
+id = "gordon-marketdata-tools"
+repo = "trading-lab-v2"
+transcript = "7dbd7511-d058-40c0-8204-b15cb1182cf1"
+contract = "wrapper-json"
+expect = ["mcp:marketdata-db"]
+
+[[case]]
+id = "after-the-bell"
+repo = "trading-lab-v2"
+transcript = "b7d975f5-450e-4bea-8e03-666832506c68"
+contract = "wrapper-json"
+
+[[case]]
+id = "email-report"
+repo = "trading-lab-v2"
+transcript = "751f7589-ed2b-49c9-81ba-5e78b925a59c"
+contract = "wrapper-json"
+
+[[case]]
+id = "warren-weekly"
+repo = "trading-lab-v2"
+transcript = "f4e34fb6-e050-4d11-bcd0-227c6808cc7c"
+contract = "wrapper-json"
+
+[[case]]
+id = "alan-reflection"
+repo = "assistant-lab"
+transcript = "c03c9e59-056f-434a-82a9-51e6ef8c416b"
+contract = "wrapper-any"
+expect = ["edit:memory"]
+
+[[case]]
+id = "bastion-translate"
+repo = "the-bastion"
+transcript = "abf86413-aa1d-40df-aea3-40818f44049b"
+contract = "structured"
+
+[[case]]
+id = "bastion-cell"
+repo = "the-bastion"
+transcript = "070955b5-49f5-4a19-99bc-c181c297f7d4"
+contract = "structured"
+
+[[case]]
+id = "bastion-sentence"
+repo = "the-bastion"
+transcript = "f58db276-1322-4176-a20a-070120d885b4"
+contract = "structured"
+
+[[case]]
+id = "bastion-row"
+repo = "the-bastion"
+transcript = "4bb3d247-6ea7-40ab-852f-c543502702e9"
+contract = "structured"
+
+[[case]]
+id = "observatory-judge"
+repo = "the-observatory"
+transcript = "6f592268-646a-46af-ba1b-b2d32b796226"
+contract = "structured"
+
+[[case]]
+id = "observatory-gregor"
+repo = "the-observatory"
+transcript = "7a98e784-6232-4bcb-93e9-5e449e2bf78b"
+contract = "structured"
+
+[[case]]
+id = "academy-performance"
+repo = "the-academy"
+transcript = "826e2f66-2d68-4d90-8d4f-1e72a5975683"
+contract = "bare-json"

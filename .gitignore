@@ -1,0 +1,7 @@
+__pycache__/
+*.egg-info/
+.venv/
+# recorded turns and run outputs contain private chat and memory: never commit
+cases/
+runs/
+data/
