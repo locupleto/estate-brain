@@ -10,8 +10,25 @@ TCC-pinned voice assistant.
 
 ## Status
 
-Phase 1 (golden-turn evals) — the task contract, two engines and the eval
-suite. No production caller uses the library yet (Phase 2).
+Phase 2 — production callers move onto the library one at a time, still on
+Claude: Photo-OCR and the Scriptorium (2026-11-01), then the Bastion,
+Observatory, Academy, the speech fast brain and the bot wrapper.
+
+Apps pin it by tag, like excalicore:
+
+```text
+estate-brain @ git+https://github.com/locupleto/estate-brain@v0.1.0
+```
+
+## Choosing the engine
+
+Callers never name a provider. `run()` resolves, in order: explicit
+`engine=`/`model=` arguments, then `BRAIN_<APP>_ENGINE` / `BRAIN_<APP>_MODEL`
+(app `photo-ocr` → `BRAIN_PHOTO_OCR_*`), then `BRAIN_ENGINE` / `BRAIN_MODEL`,
+then `claude-code` with the task's model or tier. A Claude alias never
+travels to another engine. Every call appends one metadata-only line (app,
+engine, model, tokens, cost, latency — never prompt or reply text) to
+`~/.estate-brain/ledger.jsonl`; `BRAIN_LEDGER=<path>|off` moves or disables it.
 
 | Engine | What it drives | Auth |
 |---|---|---|
