@@ -240,13 +240,22 @@ class Stream:
                 self._final = ev
                 return
 
-    def close(self) -> Result:
+    def close(self, grace: float = 0.0) -> Result:
+        """End the turn and fill `result`. `grace` > 0: a caller that stopped
+        reading after the last message gives the CLI that long to print its
+        closing result line (tokens, cost) before it is killed; 0 kills at
+        once (a barge-in)."""
         if self._closed:
             return self.result
         self._closed = True
         res = self.result
         if self._run is None:
             return res
+        if grace > 0 and self._final is None:
+            import threading
+            drain = threading.Thread(target=lambda: [None for _ in self._gen], daemon=True)
+            drain.start()
+            drain.join(grace)
         rc = self._run.close()
         res.latency_s = round(time.monotonic() - self._t0, 2)
         final = self._final

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 def run(task: Task, engine: str | None = None, model: str | None = None,
@@ -44,7 +44,7 @@ class _Unstreamable:
     def __iter__(self):
         return iter(())
 
-    def close(self) -> Result:
+    def close(self, grace: float = 0.0) -> Result:
         return self.result
 
 
@@ -61,8 +61,8 @@ class _Recorded:
     def result(self) -> Result:
         return self._inner.result
 
-    def close(self) -> Result:
-        res = self._inner.close()
+    def close(self, grace: float = 0.0) -> Result:
+        res = self._inner.close(grace)
         if self._ledger and not self._done:
             from .ledger import record
             record(self._task, res)
