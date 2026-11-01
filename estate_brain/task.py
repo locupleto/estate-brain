@@ -54,6 +54,8 @@ class Task:
     budget_usd: float | None = None
     timeout_s: float = 300
     max_turns: int | None = None
+    persist: bool = False                  # keep the engine's session transcript (the Armory
+                                           # token ledger and the golden-case capture read them)
     app: str = ""                          # for the resolver and the ledger
     role: str = ""
     on_text: Callable[[str], Any] | None = None  # streaming text deltas (optional)

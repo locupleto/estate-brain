@@ -79,8 +79,10 @@ def settings_for(task: Task) -> dict:
 def command(task: Task, model: str, exe: str) -> tuple[list[str], str]:
     """(argv, stdin text)."""
     cmd = [exe, "-p", "--output-format", "stream-json", "--verbose",
-           "--model", model, "--setting-sources", "", "--no-session-persistence",
+           "--model", model, "--setting-sources", "",
            "--strict-mcp-config", "--permission-mode", "default"]
+    if not task.persist:
+        cmd.append("--no-session-persistence")
     if task.on_text:
         cmd.append("--include-partial-messages")
     if is_bare(task):

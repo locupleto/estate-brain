@@ -65,6 +65,13 @@ class ClaudeTranslationTest(unittest.TestCase):
             self.assertIn(f"{tool}(//repo/x/**)", allow)
         self.assertEqual(cmd[cmd.index("--add-dir") + 1], "/repo/x")
 
+    def test_session_persistence_is_opt_in(self):
+        cmd, _ = claude_code.command(Task(prompt="p", tools=ToolPolicy(files=False)), "haiku", "claude")
+        self.assertIn("--no-session-persistence", cmd)
+        cmd, _ = claude_code.command(Task(prompt="p", persist=True, tools=ToolPolicy(files=False)),
+                                     "haiku", "claude")
+        self.assertNotIn("--no-session-persistence", cmd)
+
     def test_env_strips_api_keys(self):
         import os
         from unittest import mock
