@@ -14,24 +14,32 @@ from __future__ import annotations
 
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 
 def run(task: Task, engine: str | None = None, model: str | None = None,
         ledger: bool = True) -> Result:
     from . import engines
     from .ledger import record
-    from .resolve import resolve
-    engine, model = resolve(task, engine, model)
+    from .resolve import resolve_full
+    r = resolve_full(task, engine, model)
+    task = _with_tier(task, r)
     try:
-        impl = engines.get(engine)
+        impl = engines.get(r.engine)
     except ValueError as e:
-        res = Result(engine=engine, model=model or "", error=str(e))
+        res = Result(engine=r.engine, model=r.model or "", error=str(e))
     else:
-        res = impl.run(task, model)
+        res = impl.run(task, r.model)
     if ledger:
-        record(task, res)
+        record(task, res, r)
     return res
+
+
+def _with_tier(task: Task, r) -> Task:
+    if r.tier and r.tier != task.tier:
+        from dataclasses import replace
+        return replace(task, tier=r.tier)
+    return task
 
 
 class _Unstreamable:
@@ -51,8 +59,9 @@ class _Unstreamable:
 class _Recorded:
     """An engine stream that writes its ledger line when closed."""
 
-    def __init__(self, inner, task: Task, ledger: bool):
+    def __init__(self, inner, task: Task, ledger: bool, resolution=None):
         self._inner, self._task, self._ledger, self._done = inner, task, ledger, False
+        self._resolution = resolution
 
     def __iter__(self):
         return iter(self._inner)
@@ -65,7 +74,7 @@ class _Recorded:
         res = self._inner.close(grace)
         if self._ledger and not self._done:
             from .ledger import record
-            record(self._task, res)
+            record(self._task, res, self._resolution)
         self._done = True
         return res
 
@@ -83,8 +92,10 @@ def stream(task: Task, engine: str | None = None, model: str | None = None,
     it), then `close()` for the Result — close early to abort (barge-in).
     Engines that cannot stream give no events and an error Result."""
     from . import engines
-    from .resolve import resolve
-    engine, model = resolve(task, engine, model)
+    from .resolve import resolve_full
+    r = resolve_full(task, engine, model, need_stream=True)
+    task = _with_tier(task, r)
+    engine, model = r.engine, r.model
     try:
         impl = engines.get(engine)
     except ValueError as e:
@@ -92,7 +103,7 @@ def stream(task: Task, engine: str | None = None, model: str | None = None,
     if not hasattr(impl, "stream"):
         return _Unstreamable(Result(engine=engine, model=model or "",
                                     error=f"engine {engine!r} cannot stream"))
-    return _Recorded(impl.stream(task, model), task, ledger)
+    return _Recorded(impl.stream(task, model), task, ledger, r)
 
 
 __all__ = ["Task", "ToolPolicy", "ToolCall", "Result", "run", "stream", "__version__"]

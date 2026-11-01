@@ -22,7 +22,7 @@ def path() -> str | None:
     return os.path.expanduser(p or "~/.estate-brain/ledger.jsonl")
 
 
-def record(task: Task, res: Result) -> None:
+def record(task: Task, res: Result, resolution=None) -> None:
     p = path()
     if not p:
         return
@@ -32,6 +32,10 @@ def record(task: Task, res: Result) -> None:
            "latency_s": res.latency_s, "input_tokens": res.input_tokens,
            "output_tokens": res.output_tokens, "cost_usd": res.cost_usd,
            "tools": len(res.tool_calls)}
+    if resolution is not None:
+        # Where the choice came from: the Armory's stale-cache sense reads these.
+        row.update(source=resolution.source, profile=resolution.profile,
+                   registry=resolution.version)
     try:
         os.makedirs(os.path.dirname(p), exist_ok=True)
         with open(p, "a", encoding="utf-8") as f:

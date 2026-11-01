@@ -13,6 +13,7 @@ TCC-pinned voice assistant.
 Phase 2 — production callers move onto the library one at a time, still on
 Claude: Photo-OCR and the Scriptorium (2026-11-01), then the Bastion,
 Observatory, Academy, the speech fast brain and (v0.1.6, `brain run`) the bot wrapper.
+Phase 3 (v0.1.7): the central registry.
 
 Apps pin it by tag, like excalicore:
 
@@ -25,10 +26,27 @@ estate-brain @ git+https://github.com/locupleto/estate-brain@v0.1.0
 Callers never name a provider. `run()` resolves, in order: explicit
 `engine=`/`model=` arguments, then `BRAIN_<APP>_ENGINE` / `BRAIN_<APP>_MODEL`
 (app `photo-ocr` → `BRAIN_PHOTO_OCR_*`), then `BRAIN_ENGINE` / `BRAIN_MODEL`,
-then `claude-code` with the task's model or tier. A Claude alias never
-travels to another engine. Every call appends one metadata-only line (app,
+then the central registry (below), then `claude-code` with the task's model
+or tier. A Claude alias never travels to another engine. Every call appends one metadata-only line (app,
 engine, model, tokens, cost, latency — never prompt or reply text) to
 `~/.estate-brain/ledger.jsonl`; `BRAIN_LEDGER=<path>|off` moves or disables it.
+The line also says where the choice came from (`source`: explicit, env,
+registry, registry-cache, default) and the registry `profile` and version.
+
+### The registry
+
+A host can follow one registry document served by a control plane
+(`GET <url>/api/brains/registry`): named **profiles** (an engine plus a model
+per tier, a keyring *reference* for its key, `enabled`) and **assignments**
+(`app.role`, else `app`, else `defaults`). Point a host at it with
+`BRAIN_REGISTRY=<url>` or `{"registry": "<url>"}` in
+`~/.config/estate-brain/config.json`; `BRAIN_PROFILE` / `BRAIN_<APP>_PROFILE`
+force a profile. The document is resolved locally (`estate_brain.registry`),
+fetched at most once a minute and cached; when the control plane cannot be
+reached the cached copy is used however old, and a failed fetch is not
+retried for a minute. A profile whose engine this library does not have, or
+cannot stream for `stream()`, is passed over. No registry configured is the
+same as before.
 
 | Engine | What it drives | Auth |
 |---|---|---|
