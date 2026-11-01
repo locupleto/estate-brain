@@ -428,9 +428,15 @@ class Stream:
                 if time.monotonic() > deadline:
                     self.result.error = "timeout"
                     return
-        except (OSError, ValueError) as e:
+        except Exception as e:      # noqa: BLE001 - see below
+            # close() from another thread (a barge-in, a probe stopping at its
+            # first delta) pulls the socket from under the read; http.client
+            # then raises whatever it trips on (AttributeError on 3.14). That
+            # is the requested end, not an error.
+            if self._closed:
+                return
             if not self.result.error:
-                self.result.error = f"stream broke: {e}"
+                self.result.error = f"stream broke: {e.__class__.__name__}: {e}"
 
     def close(self, grace: float = 0.0) -> Result:
         if self._closed:

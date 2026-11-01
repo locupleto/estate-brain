@@ -164,6 +164,17 @@ class MessagesEngineTest(unittest.TestCase):
         self.assertEqual(body["tools"][0]["function"]["name"], "search")
         self.assertNotIn("stream_options", body)              # unknown host: not sent
 
+    def test_close_from_another_thread_ends_quietly(self):
+        _H.replies.append((200, _anthropic_sse(["a"] * 200)))
+        s = M.stream(Task(prompt="x", tools=BARE), "claude-haiku-5-5", profile=self.anth())
+        it = iter(s)
+        next(it)
+        s._resp.fp = None                      # what a cross-thread close leaves behind
+        s._closed = True
+        rest = list(it)                        # must not raise
+        self.assertLess(len(rest), 400)
+        self.assertEqual(s.result.error, "")
+
     def test_schema_reply_is_validated_with_one_retry(self):
         schema = {"type": "object", "required": ["n"], "properties": {"n": {"type": "integer"}}}
         _H.replies += [(200, _anthropic_sse(['{"n": "two"}'])), (200, _anthropic_sse(['{"n": 2}']))]
