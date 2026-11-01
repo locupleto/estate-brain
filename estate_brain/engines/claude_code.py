@@ -52,6 +52,11 @@ def settings_for(task: Task) -> dict:
     allow, deny = [], []
     if t.files:
         allow += ["Read", "Glob", "Grep"]
+    for p in t.read_paths:
+        # Scoped rules pin the per-task grant (and document it) even where the
+        # bare rules already allow reading; the dirs also go in with --add-dir.
+        p = p.rstrip("/")
+        allow += [f"Read(/{p}/**)", f"Glob(/{p}/**)", f"Grep(/{p}/**)"]
     for p in t.write_paths:
         p = p.rstrip("/")
         allow += [f"Edit(/{p}/**)", f"Write(/{p}/**)"]   # leading "//" = absolute

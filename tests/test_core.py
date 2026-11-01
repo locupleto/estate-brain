@@ -57,6 +57,14 @@ class ClaudeTranslationTest(unittest.TestCase):
         mcp = json.loads(cmd[cmd.index("--mcp-config") + 1])["mcpServers"]["cal"]
         self.assertEqual((mcp["command"], mcp["args"], mcp["env"]), ("/py", ["/srv.py"], {"A": "1"}))
 
+    def test_read_paths_are_pinned_and_added(self):
+        t = Task(prompt="p", workdir=WS, tools=ToolPolicy(read_paths=["/repo/x"]))
+        cmd, _ = claude_code.command(t, "opus", "claude")
+        allow = json.loads(cmd[cmd.index("--settings") + 1])["permissions"]["allow"]
+        for tool in ("Read", "Glob", "Grep"):
+            self.assertIn(f"{tool}(//repo/x/**)", allow)
+        self.assertEqual(cmd[cmd.index("--add-dir") + 1], "/repo/x")
+
     def test_env_strips_api_keys(self):
         import os
         from unittest import mock
