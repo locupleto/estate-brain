@@ -24,13 +24,14 @@ class ToolPolicy:
 
     files: bool = True          # file read/search tools at all (False + nothing else = a bare model call)
     read_paths: list[str] = field(default_factory=list)
-    write_paths: list[str] = field(default_factory=list)
+    write_paths: list[str] = field(default_factory=list)   # directories, or single existing files
     web: bool = False
     shell: bool = False
     mcp_servers: dict[str, dict] = field(default_factory=dict)  # name -> {"command": [...], "env": {...}}
     mcp_deny: list[str] = field(default_factory=list)  # "server" or "server.tool"
     skills: bool = False
-    subagents: dict[str, dict] = field(default_factory=dict)  # name -> {"description", "prompt", "tier"}
+    # name -> {"description", "prompt", "tier", "web": bool, "mcp": [server, ...]}
+    subagents: dict[str, dict] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -54,6 +55,7 @@ class Task:
     budget_usd: float | None = None
     timeout_s: float = 300
     max_turns: int | None = None
+    workspace_config: bool = False         # load the workspace's own agent config (its hooks)
     persist: bool = False                  # keep the engine's session transcript (the Armory
                                            # token ledger and the golden-case capture read them)
     app: str = ""                          # for the resolver and the ledger

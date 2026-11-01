@@ -65,6 +65,28 @@ class ClaudeTranslationTest(unittest.TestCase):
             self.assertIn(f"{tool}(//repo/x/**)", allow)
         self.assertEqual(cmd[cmd.index("--add-dir") + 1], "/repo/x")
 
+    def test_workspace_config_file_writes_and_agent_tools(self):
+        import tempfile, os
+        d = tempfile.mkdtemp()
+        f = os.path.join(d, "USER.md")
+        open(f, "w").close()
+        t = Task(prompt="p", workdir=d, workspace_config=True,
+                 tools=ToolPolicy(write_paths=[f, os.path.join(d, "mem")],
+                                  subagents={"scout": {"description": "d", "prompt": "x", "tier": "standard",
+                                                       "web": True, "mcp": ["ai-search"]}}))
+        cmd, _ = claude_code.command(t, "opus", "claude")
+        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "project,local")
+        allow = json.loads(cmd[cmd.index("--settings") + 1])["permissions"]["allow"]
+        self.assertIn(f"Edit(/{f})", allow)
+        self.assertNotIn(f"Edit(/{f}/**)", allow)
+        self.assertIn(f"Edit(/{d}/mem/**)", allow)
+        self.assertIn("Agent", allow)
+        scout = json.loads(cmd[cmd.index("--agents") + 1])["scout"]
+        self.assertEqual(scout["model"], "sonnet")
+        self.assertEqual(scout["tools"], ["WebSearch", "WebFetch", "mcp__ai-search"])
+        p = opencode.config_for(t, "openai/x")["permission"]["edit"]
+        self.assertEqual(p["USER.md"], "allow")
+
     def test_session_persistence_is_opt_in(self):
         cmd, _ = claude_code.command(Task(prompt="p", tools=ToolPolicy(files=False)), "haiku", "claude")
         self.assertIn("--no-session-persistence", cmd)

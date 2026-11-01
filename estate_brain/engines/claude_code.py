@@ -59,13 +59,16 @@ def settings_for(task: Task) -> dict:
         allow += [f"Read(/{p}/**)", f"Glob(/{p}/**)", f"Grep(/{p}/**)"]
     for p in t.write_paths:
         p = p.rstrip("/")
-        allow += [f"Edit(/{p}/**)", f"Write(/{p}/**)"]   # leading "//" = absolute
+        if os.path.isfile(p):
+            allow += [f"Edit(/{p})"]                       # one file
+        else:
+            allow += [f"Edit(/{p}/**)", f"Write(/{p}/**)"]   # leading "//" = absolute
     if t.web:
         allow += ["WebSearch", "WebFetch"]
     if t.skills:
         allow.append("Skill")
     if t.subagents:
-        allow.append("Task")
+        allow += ["Task", "Agent"]
     for s in t.mcp_servers:
         allow.append(f"mcp__{s}")
     for d in t.mcp_deny:
@@ -76,10 +79,23 @@ def settings_for(task: Task) -> dict:
     return {"permissions": {"allow": allow, "deny": deny}}
 
 
+def _agent(a: dict) -> dict:
+    out = {"description": a.get("description", ""), "prompt": a.get("prompt", ""),
+           "model": TIERS.get(a.get("tier", "fast"), "haiku")}
+    tools = (["WebSearch", "WebFetch"] if a.get("web") else []) + \
+        [f"mcp__{s}" for s in a.get("mcp", [])]
+    if tools or "web" in a or "mcp" in a:
+        out["tools"] = tools
+    return out
+
+
 def command(task: Task, model: str, exe: str) -> tuple[list[str], str]:
     """(argv, stdin text)."""
     cmd = [exe, "-p", "--output-format", "stream-json", "--verbose",
-           "--model", model, "--setting-sources", "",
+           "--model", model,
+           # Never the user's settings (global CLAUDE.md, hooks, plugins); the
+           # workspace's own project settings only when the task asks for them.
+           "--setting-sources", "project,local" if task.workspace_config else "",
            "--strict-mcp-config", "--permission-mode", "default"]
     if not task.persist:
         cmd.append("--no-session-persistence")
@@ -102,9 +118,7 @@ def command(task: Task, model: str, exe: str) -> tuple[list[str], str]:
         cmd += ["--mcp-config", json.dumps(mcp)]
         if task.tools.subagents:
             cmd += ["--agents", json.dumps({
-                n: {"description": a.get("description", n), "prompt": a.get("prompt", ""),
-                    "model": TIERS.get(a.get("tier", "fast"), "haiku")}
-                for n, a in task.tools.subagents.items()})]
+                n: _agent(a) for n, a in task.tools.subagents.items()})]
     if task.effort:
         cmd += ["--effort", task.effort]
     if task.budget_usd:

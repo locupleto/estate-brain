@@ -35,10 +35,18 @@ _NEUTRAL = {"read": "read", "glob": "read", "grep": "read", "list": "read",
 _ISOLATION_FLAGS = ("OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_EXTERNAL_SKILLS",
                     "OPENCODE_DISABLE_PROJECT_CONFIG", "OPENCODE_DISABLE_AUTOUPDATE",
                     "OPENCODE_DISABLE_MODELS_FETCH", "OPENCODE_PURE")
+# A workspace's own config (Task.workspace_config) is the Claude Code
+# .claude/ directory today (hooks); OpenCode has no equivalent to load, so the
+# flag is accepted and nothing extra is read.
 
 
 def _patterns(path: str, workdir: str) -> list[str]:
     path = path.rstrip("/")
+    if os.path.isfile(path):
+        out = [path]
+        if workdir and path.startswith(workdir.rstrip("/") + "/"):
+            out.append(path[len(workdir.rstrip("/")) + 1:])
+        return out
     out = [f"{path}/*", f"{path}/**"]
     if workdir and path.startswith(workdir.rstrip("/") + "/"):
         rel = path[len(workdir.rstrip("/")) + 1:]
