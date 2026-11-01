@@ -9,7 +9,8 @@ Order, first match wins:
 4. the central registry (`registry.py`): the assignment for app.role, else
    app, else the defaults; BRAIN_<APP>_PROFILE / BRAIN_PROFILE force a
    profile by name. A profile whose engine this library does not have (or
-   cannot stream, for `stream()`) is passed over, never half-used;
+   cannot stream, for `stream()`, or refuses the task: the messages engine
+   has no built-in tools) is passed over, never half-used;
 5. built-in default: claude-code, model from the task (`model`, else its tier).
 
 A model only travels with the engine it was set for: an override that
@@ -36,16 +37,25 @@ class Resolution:
     profile: str = ""
     tier: str | None = None     # the registry's tier, when it overrides the task's
     version: str = ""           # registry version the choice came from
+    spec: dict | None = None    # the profile's engine settings (registry only)
 
 
 def _app_key(app: str) -> str:
     return "".join(c if c.isalnum() else "_" for c in app.upper())
 
 
-def _usable(engine: str, need_stream: bool) -> bool:
+def _usable(engine: str, need_stream: bool, task: Task | None = None) -> bool:
+    """The engine exists, can stream when asked to, and can run this task
+    faithfully (an engine's `refuse(task)` names what it cannot do)."""
     from . import engines
     impl = engines.ENGINES.get(engine)
-    return impl is not None and (not need_stream or hasattr(impl, "stream"))
+    if impl is None or (need_stream and not hasattr(impl, "stream")):
+        return False
+    if task is not None and hasattr(impl, "refuse") and impl.refuse(task):
+        return False
+    if task is not None and task.functions and engine != "messages":
+        return False
+    return True
 
 
 def resolve_full(task: Task, engine: str | None = None, model: str | None = None,
@@ -67,9 +77,10 @@ def resolve_full(task: Task, engine: str | None = None, model: str | None = None
         else (None, "none")
     if doc:
         c = registry.choose(doc, task.app, task.role, task.tier, model or task.model, forced)
-        if c and _usable(c.engine, need_stream):
+        if c and _usable(c.engine, need_stream, task):
             return Resolution(c.engine, c.model, "registry" if src == "live" else "registry-cache",
-                              c.profile, c.tier if c.tier != task.tier else None, c.version)
+                              c.profile, c.tier if c.tier != task.tier else None, c.version,
+                              getattr(c, "spec", None) or None)
     return Resolution(DEFAULT_ENGINE, model or task.model, "default")
 
 

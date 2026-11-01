@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 
 
 def run(task: Task, engine: str | None = None, model: str | None = None,
@@ -29,10 +29,30 @@ def run(task: Task, engine: str | None = None, model: str | None = None,
     except ValueError as e:
         res = Result(engine=r.engine, model=r.model or "", error=str(e))
     else:
-        res = impl.run(task, r.model)
+        task, err = _adapt(task, r.engine)
+        res = Result(engine=r.engine, model=r.model or "", error=err) if err \
+            else impl.run(task, r.model, **_engine_kw(r))
     if ledger:
         record(task, res, r)
     return res
+
+
+def _engine_kw(r) -> dict:
+    return {"profile": r.spec} if r.engine == "messages" and r.spec else {}
+
+
+def _adapt(task: Task, engine: str):
+    """Fit a task to an agent engine: prior turns become a transcript above
+    the prompt; caller-run functions cannot be expressed (refused)."""
+    if engine == "messages":
+        return task, ""
+    if task.functions:
+        return task, f"engine {engine!r} cannot run caller functions (messages engine only)"
+    if task.messages:
+        from dataclasses import replace
+        from .task import transcript
+        return replace(task, prompt=transcript(task.messages) + task.prompt, messages=[]), ""
+    return task, ""
 
 
 def _with_tier(task: Task, r) -> Task:
@@ -103,7 +123,10 @@ def stream(task: Task, engine: str | None = None, model: str | None = None,
     if not hasattr(impl, "stream"):
         return _Unstreamable(Result(engine=engine, model=model or "",
                                     error=f"engine {engine!r} cannot stream"))
-    return _Recorded(impl.stream(task, model), task, ledger, r)
+    task, err = _adapt(task, engine)
+    if err:
+        return _Unstreamable(Result(engine=engine, model=model or "", error=err))
+    return _Recorded(impl.stream(task, model, **_engine_kw(r)), task, ledger, r)
 
 
 __all__ = ["Task", "ToolPolicy", "ToolCall", "Result", "run", "stream", "__version__"]

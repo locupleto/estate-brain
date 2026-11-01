@@ -54,6 +54,16 @@ class Task:
     workdir: str = ""                      # cwd for agent engines
     schema: dict | None = None             # JSON Schema for a structured reply
     images: list = field(default_factory=list)  # file paths or raw bytes (JPEG/PNG)
+    # Prior turns, oldest first, in the Messages-API shape: {"role": "user" |
+    # "assistant", "content": str | [blocks]} (text, image, tool_use,
+    # tool_result blocks). `prompt` is then the new user turn ("" when the
+    # last entry already is one). The messages engine sends them as turns;
+    # agent engines get a plain transcript above the prompt.
+    messages: list = field(default_factory=list)
+    # Caller-run tools (Messages-API tool schemas: name, description,
+    # input_schema). The turn stops at the first tool call; the caller runs
+    # it and sends the result back as the next turn. messages engine only.
+    functions: list = field(default_factory=list)
     tools: ToolPolicy = field(default_factory=ToolPolicy)
     tier: str = "standard"
     effort: str | None = None
@@ -92,6 +102,7 @@ class ToolCall:
     ok: bool | None = None
     error: str = ""
     output: str = ""     # first ~800 chars of the tool result
+    id: str = ""         # the call's id (messages engine: answer it with a tool_result)
 
 
 @dataclass
@@ -114,3 +125,16 @@ class Result:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def transcript(messages: list) -> str:
+    """Prior turns as plain text, for engines that take one prompt. Non-text
+    blocks are named, not rendered."""
+    lines = []
+    for m in messages:
+        c = m.get("content")
+        if isinstance(c, list):
+            c = " ".join(b.get("text", "") if b.get("type") == "text" else f"[{b.get('type')}]"
+                         for b in c if isinstance(b, dict))
+        lines.append(f"{'User' if m.get('role') == 'user' else 'Assistant'}: {c}")
+    return "Conversation so far:\n" + "\n\n".join(lines) + "\n\n" if lines else ""

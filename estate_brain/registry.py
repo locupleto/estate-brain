@@ -30,7 +30,7 @@ import os
 import socket
 import time
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 TTL_S = 60.0
 TIMEOUT_S = 1.5
@@ -123,6 +123,9 @@ class Choice:
     tier: str
     key: str | None     # a keyring reference ("keyring:<name>"), never a secret
     version: str
+    # The profile's engine settings (api, base_url, key, tiers): what the
+    # messages engine needs to know where to send the call.
+    spec: dict = field(default_factory=dict)
 
 
 def choose(doc: dict, app: str, role: str, tier: str, model: str | None,
@@ -151,5 +154,6 @@ def choose(doc: dict, app: str, role: str, tier: str, model: str | None,
             m = model                       # the caller's Claude alias stays with Claude
         else:
             m = tiers.get(t)
-        return Choice(name, p["engine"], m, t, p.get("key"), str(doc.get("version", "")))
+        spec = {k: p[k] for k in ("api", "base_url", "key", "provider", "tiers") if k in p}
+        return Choice(name, p["engine"], m, t, p.get("key"), str(doc.get("version", "")), spec)
     return None

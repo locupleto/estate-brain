@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from . import claude_code, opencode
+from . import claude_code, messages, opencode
 
-ENGINES = {claude_code.NAME: claude_code, opencode.NAME: opencode}
+ENGINES = {claude_code.NAME: claude_code, opencode.NAME: opencode, messages.NAME: messages}
 
 
 def get(name: str):

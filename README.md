@@ -13,7 +13,8 @@ TCC-pinned voice assistant.
 Phase 2 — production callers move onto the library one at a time, still on
 Claude: Photo-OCR and the Scriptorium (2026-11-01), then the Bastion,
 Observatory, Academy, the speech fast brain and (v0.1.6, `brain run`) the bot wrapper.
-Phase 3 (v0.1.7): the central registry.
+Phase 3 (v0.1.7): the central registry. Phase 4 (v0.1.8): the `messages`
+engine, a model's HTTP API called directly.
 
 Apps pin it by tag, like excalicore:
 
@@ -44,14 +45,27 @@ per tier, a keyring *reference* for its key, `enabled`) and **assignments**
 force a profile. The document is resolved locally (`estate_brain.registry`),
 fetched at most once a minute and cached; when the control plane cannot be
 reached the cached copy is used however old, and a failed fetch is not
-retried for a minute. A profile whose engine this library does not have, or
-cannot stream for `stream()`, is passed over. No registry configured is the
+retried for a minute. A profile whose engine this library does not have,
+cannot stream for `stream()`, or refuses the task (the `messages` engine has
+no built-in tools) is passed over. No registry configured is the
 same as before.
 
 | Engine | What it drives | Auth |
 |---|---|---|
 | `claude-code` | the `claude` CLI, stripped of user settings | subscription login (API keys are removed from its env) |
 | `opencode` | `opencode run`, fully isolated per run | provider keys from the environment |
+| `messages` | a model's HTTP API: Anthropic Messages, or OpenAI-compatible `/chat/completions` (OpenAI, Gemini, xAI, Perplexity, OpenRouter, Ollama, LM Studio, mlx-lm) | the profile's `keyring:<name>` from the estate keyring next to the registry, else the provider's usual environment variable; none for a local `base_url` |
+
+The `messages` engine has no tools of its own: it runs a model call with a
+system prompt, prior turns (`Task.messages`), images, a JSON-schema reply
+(validated, one retry) and caller-run functions (`Task.functions`: the turn
+stops at a tool call, the caller answers with a `tool_result` turn). A task
+that wants files, web, shell, MCP, skills or subagents is refused, never
+run without them. Where a call goes comes from the profile (`api`,
+`base_url`, `key`), else from the model id (claude-, gpt-, gemini-, grok-,
+sonar). Its `stream()` yields Messages-API events for every provider (the
+OpenAI stream is translated). Cost is computed from Anthropic list prices;
+other providers report none. `temperature` is never sent.
 
 ## Use
 

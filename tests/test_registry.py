@@ -99,9 +99,15 @@ class LiveRegistryTest(unittest.TestCase):
             r = resolve_full(Task(prompt="x", app="bots", role="JARVIS", model="opus"))
         self.assertEqual((r.engine, r.model, r.source), ("claude-code", "opus", "env"))
 
-    def test_unimplemented_engine_is_passed_over(self):
+    def test_a_profile_that_refuses_the_task_is_passed_over(self):
+        # The messages engine has no built-in tools: a default Task (file
+        # tools on) cannot run on it faithfully, so the default takes it.
         r = resolve_full(Task(prompt="x", app="later"))
         self.assertEqual((r.engine, r.source), ("claude-code", "default"))
+        from estate_brain import ToolPolicy
+        r = resolve_full(Task(prompt="x", app="later", tier="fast", tools=ToolPolicy(files=False)))
+        self.assertEqual((r.engine, r.model, r.source, r.profile), ("messages", "x", "registry", "future"))
+        self.assertEqual(r.spec, {"tiers": {"fast": "x"}})
 
     def test_stream_skips_an_engine_that_cannot_stream(self):
         r = resolve_full(Task(prompt="x", app="bots", role="JARVIS"), need_stream=True)
