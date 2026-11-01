@@ -118,6 +118,8 @@ class MessagesEngineTest(unittest.TestCase):
         self.assertEqual((body["model"], body["system"], body["output_config"]),
                          ("claude-haiku-5-5", "be brief", {"effort": "low"}))
         self.assertNotIn("temperature", body)
+        self.assertEqual(body["max_tokens"], M.MAX_TOKENS)
+        self.assertEqual(M.anthropic_body(Task(prompt="x", max_output_tokens=300), "m", "x")["max_tokens"], 300)
         self.assertTrue(body["stream"])
 
     def test_history_images_and_functions_go_out_as_turns(self):

@@ -189,7 +189,7 @@ def _turns(task: Task, prompt: str) -> list[dict]:
 
 
 def anthropic_body(task: Task, model: str, prompt: str) -> dict:
-    body = {"model": model, "max_tokens": MAX_TOKENS, "stream": True,
+    body = {"model": model, "max_tokens": task.max_output_tokens or MAX_TOKENS, "stream": True,
             "messages": _turns(task, prompt)}
     if task.system:
         body["system"] = task.system
@@ -242,6 +242,8 @@ def openai_messages(task: Task, prompt: str) -> list[dict]:
 
 def openai_body(task: Task, model: str, prompt: str, url: str) -> dict:
     body = {"model": model, "stream": True, "messages": openai_messages(task, prompt)}
+    if task.max_output_tokens:
+        body["max_tokens"] = task.max_output_tokens
     if (urlparse(url).hostname or "") in _USAGE_HOSTS:
         body["stream_options"] = {"include_usage": True}
     if task.functions:

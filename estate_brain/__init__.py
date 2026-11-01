@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.9"
+__version__ = "0.1.10"
 
 
 def run(task: Task, engine: str | None = None, model: str | None = None,

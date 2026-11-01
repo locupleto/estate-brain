@@ -71,6 +71,9 @@ class Task:
     budget_usd: float | None = None
     timeout_s: float = 300
     max_turns: int | None = None
+    # A ceiling on one reply's length (messages engine: max_tokens; the agent
+    # CLIs have no such knob and ignore it). None = the engine's default.
+    max_output_tokens: int | None = None
     workspace_config: bool = False         # load the workspace's own agent config (its hooks)
     persist: bool = False                  # keep the engine's session transcript (the Armory
                                            # token ledger and the golden-case capture read them)
