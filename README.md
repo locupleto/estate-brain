@@ -12,7 +12,7 @@ TCC-pinned voice assistant.
 
 Phase 2 — production callers move onto the library one at a time, still on
 Claude: Photo-OCR and the Scriptorium (2026-11-01), then the Bastion,
-Observatory, Academy, the speech fast brain and the bot wrapper.
+Observatory, Academy, the speech fast brain and (v0.1.6, `brain run`) the bot wrapper.
 
 Apps pin it by tag, like excalicore:
 
@@ -51,6 +51,28 @@ print(r.ok, r.text, r.cost_usd, [t.name for t in r.tool_calls])
 `ToolPolicy` is a fence, not a wish list: engines translate it to their own
 permission model (Claude Code `--settings` rules, OpenCode `permission`),
 deny everything else, and never run a shell unless `shell=True`.
+
+## From the shell: `brain run`
+
+For callers written in bash (the estate's bot wrapper):
+
+```sh
+python -m estate_brain run --spec spec.json --prompt-file prompt.txt   # reply on stdout
+python -m estate_brain policy --spec spec.json                         # fence only, no model call
+```
+
+The spec names a workdir and, optionally, a Claude Code permission file
+(`permissions_file`, with `{{PROJECT_DIR}}` substituted), an MCP config and an
+`--agents` file. `estate_brain.claude_rules` translates them into a
+`ToolPolicy`; a rule it cannot express exactly is refused (exit 64, no model
+called), and `policy` checks that the claude-code engine writes the same
+fence back out. Exit codes: 0 ok, 1 error, 3 timeout, 4 spend ceiling, 5
+transient provider trouble, 64 refused, 143 stopped by SIGTERM (the engine's
+process group goes with it). See `estate_brain/runcli.py`.
+
+A persisted turn carries ONE user setting, `cleanupPeriodDays`, into the
+engine: user settings are otherwise never loaded, and without it the CLI's
+30-day default would govern the cleanup of the transcripts it keeps.
 
 ## Golden-turn evals
 

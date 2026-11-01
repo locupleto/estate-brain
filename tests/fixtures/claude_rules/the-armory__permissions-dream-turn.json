@@ -1,0 +1,18 @@
+{
+ "permissions": {
+  "allow": [
+   "Read(/{{PROJECT_DIR}}/**)",
+   "Glob(/{{PROJECT_DIR}}/**)",
+   "Grep(/{{PROJECT_DIR}}/**)",
+   "Read(//home/u/Public/**)",
+   "Glob(//home/u/Public/**)",
+   "Grep(//home/u/Public/**)",
+   "Edit(/{{PROJECT_DIR}}/data/memory/**)",
+   "Edit(/{{PROJECT_DIR}}/bots/USER.md)",
+   "Edit(/{{PROJECT_DIR}}/bots/USER.md.bak)"
+  ],
+  "deny": [
+   "Bash"
+  ]
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "permissions": {
+  "allow": [
+   "Agent",
+   "Task",
+   "Read",
+   "Glob",
+   "Grep",
+   "WebSearch",
+   "WebFetch",
+   "Write(/{{PROJECT_DIR}}/data/memory/**)",
+   "Edit(/{{PROJECT_DIR}}/data/memory/**)",
+   "mcp__x-search",
+   "mcp__ai-search",
+   "mcp__rss-news",
+   "mcp__google-trends",
+   "mcp__marketdata-db",
+   "mcp__openweathermap",
+   "mcp__polymarket"
+  ],
+  "deny": [
+   "Bash"
+  ]
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "permissions": {
+  "allow": [
+   "Read",
+   "Glob",
+   "Grep",
+   "Edit(/{{PROJECT_DIR}}/data/memory/**)",
+   "Edit(/{{PROJECT_DIR}}/bots/USER.md)",
+   "Edit(/{{PROJECT_DIR}}/bots/USER.md.bak)",
+   "WebSearch",
+   "WebFetch",
+   "mcp__book-library",
+   "mcp__youtube-history",
+   "mcp__ai-search",
+   "mcp__mcp-image",
+   "mcp__gemini-video",
+   "mcp__rss-news",
+   "mcp__openweathermap",
+   "mcp__polymarket",
+   "mcp__google-trends",
+   "mcp__telegram-chat-db"
+  ],
+  "deny": [
+   "Bash",
+   "mcp__telegram-chat-db__cleanup_old_sessions"
+  ]
+ }
+}

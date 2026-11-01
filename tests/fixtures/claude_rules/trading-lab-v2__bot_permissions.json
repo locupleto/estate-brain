@@ -1,0 +1,34 @@
+{
+ "permissions": {
+  "allow": [
+   "Read",
+   "Glob",
+   "Grep",
+   "Skill",
+   "WebSearch",
+   "WebFetch",
+   "mcp__strategy-research-db",
+   "mcp__finance",
+   "mcp__telegram-chat-db",
+   "mcp__marketdata-db",
+   "mcp__ai-search",
+   "mcp__mcp-image",
+   "mcp__openweathermap",
+   "mcp__polymarket",
+   "mcp__gemini-video",
+   "mcp__trade-db",
+   "mcp__rss-news",
+   "mcp__exchange-calendar",
+   "mcp__youtube-history",
+   "mcp__book-library",
+   "mcp__google-trends",
+   "mcp__x-search",
+   "Edit(/{{PROJECT_DIR}}/data/memory/**)",
+   "Edit(/{{PROJECT_DIR}}/bots/USER.md)"
+  ],
+  "deny": [
+   "Bash",
+   "mcp__telegram-chat-db__cleanup_old_sessions"
+  ]
+ }
+}

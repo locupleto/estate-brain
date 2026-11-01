@@ -60,12 +60,20 @@ def config_for(task: Task, model: str) -> dict:
     if t.files:
         perm.update({"read": "allow", "glob": "allow", "grep": "allow", "list": "allow"})
     edit = {"*": "deny"}
-    for p in t.write_paths:
-        for pat in _patterns(p, task.workdir):
-            edit[pat] = "allow"
+    paths = [p[:-3] if p.endswith("/**") else p for p in t.write_paths if p != "*"]
+    if "*" in t.write_paths:
+        edit = "allow"
+    else:
+        for p in paths:
+            for pat in _patterns(p, task.workdir):
+                edit[pat] = "allow"
+        for f in t.write_files:
+            edit[f] = "allow"
+            if task.workdir and f.startswith(task.workdir.rstrip("/") + "/"):
+                edit[f[len(task.workdir.rstrip("/")) + 1:]] = "allow"
     perm["edit"] = edit
     ext = {"*": "deny"}
-    for p in t.read_paths + t.write_paths:
+    for p in t.read_paths + paths + [os.path.dirname(f) for f in t.write_files]:
         if not (task.workdir and p.startswith(task.workdir.rstrip("/") + "/")):
             ext[f"{p.rstrip('/')}/**"] = "allow"
     perm["external_directory"] = ext
@@ -73,8 +81,13 @@ def config_for(task: Task, model: str) -> dict:
     perm["webfetch"] = perm["websearch"] = "allow" if t.web else "deny"
     perm["skill"] = "allow" if t.skills else "deny"
     perm["task"] = "allow" if t.subagents else "deny"
+    narrowed = {a.partition(".")[0] for a in t.mcp_allow}
     for s in t.mcp_servers:
-        perm[f"{s}_*"] = "allow"
+        if s not in narrowed:
+            perm[f"{s}_*"] = "allow"
+    for a in t.mcp_allow:
+        srv, _, tool = a.partition(".")
+        perm[f"{srv}_{tool}"] = "allow"
     for d in t.mcp_deny:
         srv, _, tool = d.partition(".")
         perm[f"{srv}_{tool}" if tool else f"{srv}_*"] = "deny"

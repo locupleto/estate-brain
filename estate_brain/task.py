@@ -24,13 +24,19 @@ class ToolPolicy:
 
     files: bool = True          # file read/search tools at all (False + nothing else = a bare model call)
     read_paths: list[str] = field(default_factory=list)
-    write_paths: list[str] = field(default_factory=list)   # directories, or single existing files
+    # Directories, or single existing files. A path ending in "/**" is always a
+    # directory; "*" alone = write anywhere the session can reach.
+    write_paths: list[str] = field(default_factory=list)
+    write_files: list[str] = field(default_factory=list)   # single files, existing or not
     web: bool = False
     shell: bool = False
     mcp_servers: dict[str, dict] = field(default_factory=dict)  # name -> {"command": [...], "env": {...}}
     mcp_deny: list[str] = field(default_factory=list)  # "server" or "server.tool"
+    # Tool-level grants on a mounted server ("server.tool") for a server that
+    # is not allowed whole; its spec still goes in mcp_servers.
+    mcp_allow: list[str] = field(default_factory=list)
     skills: bool = False
-    # name -> {"description", "prompt", "tier", "web": bool, "mcp": [server, ...]}
+    # name -> {"description", "prompt", "tier", "effort"?, "web": bool, "mcp": [server, ...]}
     subagents: dict[str, dict] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -61,6 +67,9 @@ class Task:
     app: str = ""                          # for the resolver and the ledger
     role: str = ""
     on_text: Callable[[str], Any] | None = None  # streaming text deltas (optional)
+    # Engine-specific knobs that change no behaviour, only diagnostics, keyed
+    # by engine name; an engine ignores the others' (claude-code: debug_file).
+    engine_opts: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = asdict(self)

@@ -1,0 +1,35 @@
+{
+ "permissions": {
+  "allow": [
+   "Read",
+   "Glob",
+   "Grep",
+   "Write",
+   "Edit",
+   "Skill",
+   "WebSearch",
+   "WebFetch",
+   "Bash",
+   "mcp__strategy-research-db",
+   "mcp__finance",
+   "mcp__telegram-chat-db",
+   "mcp__marketdata-db",
+   "mcp__ai-search",
+   "mcp__mcp-image",
+   "mcp__openweathermap",
+   "mcp__polymarket",
+   "mcp__gemini-video",
+   "mcp__trade-db",
+   "mcp__rss-news",
+   "mcp__exchange-calendar",
+   "mcp__youtube-history",
+   "mcp__book-library",
+   "mcp__google-trends",
+   "mcp__gmail",
+   "mcp__maps"
+  ],
+  "deny": [
+   "mcp__telegram-chat-db__cleanup_old_sessions"
+  ]
+ }
+}

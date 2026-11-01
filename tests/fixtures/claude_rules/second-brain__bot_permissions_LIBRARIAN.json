@@ -1,0 +1,25 @@
+{
+ "permissions": {
+  "allow": [
+   "Read",
+   "Glob",
+   "Grep",
+   "Edit(//home/u/vault/**)",
+   "Edit(/{{PROJECT_DIR}}/data/memory/**)",
+   "WebSearch",
+   "WebFetch",
+   "mcp__book-library",
+   "mcp__telegram-chat-db",
+   "mcp__ai-search__search_x",
+   "mcp__x-search",
+   "mcp__gemini-video"
+  ],
+  "deny": [
+   "Bash",
+   "mcp__ai-search__ask_grok",
+   "mcp__ai-search__ask_perplexity",
+   "mcp__ai-search__generate_image_grok",
+   "mcp__telegram-chat-db__cleanup_old_sessions"
+  ]
+ }
+}

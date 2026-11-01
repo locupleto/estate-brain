@@ -1,0 +1,16 @@
+{
+ "permissions": {
+  "allow": [
+   "Read",
+   "Glob",
+   "Grep",
+   "Bash",
+   "Write(/{{PROJECT_DIR}}/data/memory/**)",
+   "Edit(/{{PROJECT_DIR}}/data/memory/**)"
+  ],
+  "deny": [
+   "WebSearch",
+   "WebFetch"
+  ]
+ }
+}

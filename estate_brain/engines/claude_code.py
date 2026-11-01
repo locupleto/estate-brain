@@ -44,7 +44,7 @@ def is_bare(task: Task) -> bool:
 def builtins_allowed(task: Task) -> bool:
     """Does the fence allow any of Claude Code's own (non-MCP) tools?"""
     t = task.tools
-    return bool(t.files or t.read_paths or t.write_paths or t.web or t.shell
+    return bool(t.files or t.read_paths or t.write_paths or t.write_files or t.web or t.shell
                 or t.skills or t.subagents)
 
 
@@ -66,30 +66,68 @@ def settings_for(task: Task) -> dict:
         p = p.rstrip("/")
         allow += [f"Read(/{p}/**)", f"Glob(/{p}/**)", f"Grep(/{p}/**)"]
     for p in t.write_paths:
-        p = p.rstrip("/")
-        if os.path.isfile(p):
+        if p == "*":
+            allow += ["Edit", "Write"]                     # anywhere the session reaches
+            continue
+        explicit_dir = p.endswith("/**")
+        p = p[:-3] if explicit_dir else p.rstrip("/")
+        if not explicit_dir and os.path.isfile(p):
             allow += [f"Edit(/{p})"]                       # one file
         else:
             allow += [f"Edit(/{p}/**)", f"Write(/{p}/**)"]   # leading "//" = absolute
+    for p in t.write_files:
+        allow.append(f"Edit(/{p})")                        # Edit() governs Write too
     if t.web:
         allow += ["WebSearch", "WebFetch"]
     if t.skills:
         allow.append("Skill")
     if t.subagents:
         allow += ["Task", "Agent"]
+    narrowed = {a.partition(".")[0] for a in t.mcp_allow}
     for s in t.mcp_servers:
-        allow.append(f"mcp__{s}")
+        if s not in narrowed:
+            allow.append(f"mcp__{s}")
+    for a in t.mcp_allow:
+        srv, _, tool = a.partition(".")
+        allow.append(f"mcp__{srv}__{tool}")
     for d in t.mcp_deny:
         srv, _, tool = d.partition(".")
         deny.append(f"mcp__{srv}__{tool}" if tool else f"mcp__{srv}")
-    if not t.shell:
+    # What the fence leaves out is denied outright, not merely unallowed, so a
+    # project or local settings file loaded with workspace_config cannot widen it.
+    if t.shell:
+        allow.append("Bash")
+    else:
         deny.append("Bash")
-    return {"permissions": {"allow": allow, "deny": deny}}
+    if not t.web:
+        deny += ["WebSearch", "WebFetch"]
+    out = {"permissions": {"allow": allow, "deny": deny}}
+    if task.persist:
+        keep = _user_cleanup_days()
+        if keep is not None:
+            out["cleanupPeriodDays"] = keep
+    return out
+
+
+def _user_cleanup_days():
+    """The user's transcript retention, the ONE user setting carried into a
+    turn. User settings are never loaded, and without this key the CLI's
+    default (30 days) would govern the cleanup of the transcripts a
+    persisted turn writes, which the Armory's token ledger reads."""
+    base = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+    try:
+        with open(os.path.join(base, "settings.json")) as f:
+            v = json.load(f).get("cleanupPeriodDays")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return v if isinstance(v, int) and not isinstance(v, bool) else None
 
 
 def _agent(a: dict) -> dict:
     out = {"description": a.get("description", ""), "prompt": a.get("prompt", ""),
            "model": TIERS.get(a.get("tier", "fast"), "haiku")}
+    if a.get("effort"):
+        out["effort"] = a["effort"]
     tools = (["WebSearch", "WebFetch"] if a.get("web") else []) + \
         [f"mcp__{s}" for s in a.get("mcp", [])]
     if tools or "web" in a or "mcp" in a:
@@ -122,6 +160,8 @@ def command(task: Task, model: str, exe: str, partial: bool = False) -> tuple[li
             cmd += ["--system-prompt", task.system]
         if task.tools.mcp_servers:
             cmd += ["--settings", json.dumps(settings_for(task)), "--mcp-config", _mcp_config(task)]
+        elif task.persist:
+            cmd += ["--settings", json.dumps(settings_for(task))]
     else:
         cmd += ["--settings", json.dumps(settings_for(task))]
         if task.system:
@@ -140,6 +180,9 @@ def command(task: Task, model: str, exe: str, partial: bool = False) -> tuple[li
         cmd += ["--max-turns", str(task.max_turns)]
     if task.schema:
         cmd += ["--json-schema", json.dumps(task.schema)]
+    debug_file = (task.engine_opts.get(NAME) or {}).get("debug_file")
+    if debug_file:
+        cmd += ["--debug-file", debug_file]
     if task.images:
         cmd += ["--input-format", "stream-json"]
         content = []

@@ -3,6 +3,8 @@
     brain eval capture [--only a,b] [--force]
     brain eval run --engine claude-code|opencode [--model M] [--only a,b] [--jobs 3]
     brain eval report [RUN_DIR]          (default: the latest run)
+    brain run --spec SPEC.json --prompt-file PROMPT.txt
+    brain policy --spec SPEC.json        (translate the fence only; no model call)
 """
 
 from __future__ import annotations
@@ -13,6 +15,11 @@ from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv[:1] in (["run"], ["policy"]):
+        from . import runcli
+        return runcli.main(argv)
     ap = argparse.ArgumentParser(prog="brain")
     sub = ap.add_subparsers(dest="cmd", required=True)
     ev = sub.add_parser("eval").add_subparsers(dest="sub", required=True)

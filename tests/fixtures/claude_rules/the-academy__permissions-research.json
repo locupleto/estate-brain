@@ -1,0 +1,15 @@
+{
+ "permissions": {
+  "allow": [
+   "Agent",
+   "Task",
+   "WebSearch",
+   "WebFetch",
+   "mcp__ai-search",
+   "mcp__x-search"
+  ],
+  "deny": [
+   "Bash"
+  ]
+ }
+}

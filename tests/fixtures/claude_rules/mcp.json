@@ -1,0 +1,9 @@
+{"mcpServers": {
+  "book-library": {"command": "/bin/echo", "args": ["book"]},
+  "telegram-chat-db": {"command": "/bin/echo", "args": ["chat"], "env": {"X": "1"}},
+  "ai-search": {"command": "/bin/echo"},
+  "x-search": {"command": "/bin/echo"},
+  "gemini-video": {"command": "/bin/echo"},
+  "marketdata-db": {"command": "/bin/echo"},
+  "unused-server": {"command": "/bin/echo"}
+}}
