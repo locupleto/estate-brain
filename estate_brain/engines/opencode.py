@@ -56,6 +56,10 @@ _ISOLATION_FLAGS = ("OPENCODE_DISABLE_CLAUDE_CODE", "OPENCODE_DISABLE_EXTERNAL_S
 
 
 _CATALOGUE_URL = "https://models.dev/api.json"
+# Used only when the catalogue is missing or does not name the variable.
+_KEY_VARS = {"openai": ["OPENAI_API_KEY"], "anthropic": ["ANTHROPIC_API_KEY"],
+             "google": ["GOOGLE_GENERATIVE_AI_API_KEY", "GEMINI_API_KEY"],
+             "xai": ["XAI_API_KEY"], "openrouter": ["OPENROUTER_API_KEY"]}
 _CATALOGUE_MAX_AGE_S = 24 * 3600
 
 
@@ -72,7 +76,11 @@ def catalogue_path(now: float | None = None) -> str | None:
     fresh = os.path.exists(path) and now - os.path.getmtime(path) < _CATALOGUE_MAX_AGE_S
     if not fresh and not os.environ.get("ESTATE_BRAIN_OFFLINE"):
         try:
-            with urllib.request.urlopen(_CATALOGUE_URL, timeout=20) as r:
+            from .. import __version__
+            # models.dev answers Python's default User-Agent with 403.
+            req = urllib.request.Request(_CATALOGUE_URL,
+                                         headers={"User-Agent": f"estate-brain/{__version__}"})
+            with urllib.request.urlopen(req, timeout=20) as r:
                 body = r.read()
             json.loads(body)
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -121,7 +129,7 @@ def key_env(model: str, profile: dict | None, cat: dict) -> tuple[dict, str | No
     if not value:
         return {}, f"no API key for this profile ({profile['key']})"
     prov = model.partition("/")[0]
-    names = (cat.get(prov) or {}).get("env") or []
+    names = (cat.get(prov) or {}).get("env") or _KEY_VARS.get(prov) or []
     if not names:
         return {}, f"no key variable known for provider {prov!r}"
     return {n: value for n in names}, None

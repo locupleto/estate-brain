@@ -16,7 +16,7 @@ import re
 
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.14"
+__version__ = "0.1.15"
 
 
 # Failures worth one more try on a fallback profile: the provider or the

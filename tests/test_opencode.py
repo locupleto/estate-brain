@@ -70,6 +70,23 @@ class OpencodeBotTurnTest(unittest.TestCase):
         self.assertEqual(env["OPENAI_API_KEY"], "sk-test")
         self.assertEqual(env["OPENCODE_MODELS_PATH"], os.path.join(self.home, "opencode-models.json"))
 
+    def test_without_a_catalogue_the_known_providers_still_get_their_key(self):
+        os.remove(os.path.join(self.home, "opencode-models.json"))
+        with mock.patch("estate_brain.keys.keyring", lambda name: "sk-test"):
+            env, why = opencode.key_env("openai/gpt-6.1-sol", {"key": "keyring:openai_api_key"}, {})
+        self.assertEqual((env, why), ({"OPENAI_API_KEY": "sk-test"}, None))
+
+    def test_the_catalogue_fetch_sends_a_user_agent(self):
+        os.remove(os.path.join(self.home, "opencode-models.json"))
+        seen = {}
+        def urlopen(req, timeout):
+            seen["ua"] = req.get_header("User-agent")
+            raise OSError("offline")
+        with mock.patch.dict(os.environ, {"ESTATE_BRAIN_OFFLINE": ""}), \
+                mock.patch("urllib.request.urlopen", urlopen):
+            opencode.catalogue_path()
+        self.assertTrue(seen["ua"].startswith("estate-brain/"))
+
     def test_an_unreadable_key_or_unknown_model_refuses_before_spawning(self):
         exe = self.fake([_text("should not run")])
         with mock.patch("estate_brain.keys.keyring", lambda name: None):
