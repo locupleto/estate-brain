@@ -36,13 +36,12 @@ import base64
 import json
 import os
 import re
-import socket
-import threading
 import time
 import urllib.error
 import urllib.request
 from urllib.parse import urlparse
 
+from .. import keys
 from ..structured import extract_json, schema_instruction, validate
 from ..task import Result, Task, ToolCall
 
@@ -133,37 +132,13 @@ def _local(url: str) -> bool:
     return host in ("localhost", "127.0.0.1", "::1") or host.endswith(".local")
 
 
-_keys: dict = {"at": 0.0, "values": {}}
-_key_lock = threading.Lock()
-KEY_TTL_S = 300.0
-_resolver = None
-
-
-def set_key_resolver(fn) -> None:
-    """Let a host process supply keys itself (`fn(name) -> str | None`), e.g.
-    the Armory from its own keyring rather than over HTTP to itself."""
-    global _resolver
-    _resolver = fn
+# Kept for callers that set the resolver here (the Armory, the voice assistant).
+_keys = keys._keys
+set_key_resolver = keys.set_key_resolver
 
 
 def _keyring(name: str) -> str | None:
-    if _resolver is not None:
-        return _resolver(name)
-    from .. import registry
-    base = registry.url()
-    if not base:
-        return None
-    with _key_lock:
-        if time.monotonic() - _keys["at"] > KEY_TTL_S:
-            try:
-                req = urllib.request.Request(base + "/api/keyring/values",
-                                             headers={"X-Brain-Host": socket.gethostname().split(".")[0]})
-                with urllib.request.urlopen(req, timeout=3) as r:
-                    vals = json.load(r)
-                _keys.update(at=time.monotonic(), values=vals if isinstance(vals, dict) else {})
-            except (OSError, ValueError):
-                _keys["at"] = time.monotonic() - KEY_TTL_S + 30   # retry in 30 s, not per call
-        return _keys["values"].get(name)
+    return keys.keyring(name)
 
 
 def api_key(rt: dict) -> str | None:

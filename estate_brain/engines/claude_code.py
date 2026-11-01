@@ -204,12 +204,16 @@ def command(task: Task, model: str, exe: str, partial: bool = False) -> tuple[li
     return cmd, stdin
 
 
-def env_for() -> dict:
+def env_for(api_key: str | None = None) -> dict:
     env = dict(os.environ)
     # Subscription auth only: an API key in the environment would make the
-    # CLI bill the metered Console account instead.
+    # CLI bill the metered Console account instead. The one exception is a
+    # profile that names a key (the metered fallback, `claude-api-cli`):
+    # then the CLI runs on that key, on purpose.
     for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"):
         env.pop(k, None)
+    if api_key:
+        env["ANTHROPIC_API_KEY"] = api_key
     env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
     env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
     return env
@@ -221,7 +225,8 @@ class Stream:
     when tools run); `close()` ends the turn at any point (a barge-in kills
     the CLI and its MCP children) and fills `result`."""
 
-    def __init__(self, task: Task, model: str | None = None, partial: bool = True):
+    def __init__(self, task: Task, model: str | None = None, partial: bool = True,
+                 profile: dict | None = None):
         self.task = task
         model = model or task.model or TIERS.get(task.tier, "sonnet")
         self.result = Result(engine=NAME, model=model)
@@ -234,8 +239,18 @@ class Stream:
             self.result.error = "claude binary not found"
             self._gen = iter(())
             return
+        api_key = None
+        if profile and profile.get("key"):
+            from .. import keys
+            api_key = keys.resolve(profile["key"])
+            if not api_key:
+                # Never fall back to the subscription here: this profile exists
+                # to run when the subscription cannot.
+                self.result.error = f"no API key for this profile ({profile['key']})"
+                self._gen = iter(())
+                return
         cmd, stdin = command(task, model, exe, partial=partial)
-        self._run = Run(cmd, env=env_for(), cwd=task.workdir or None, stdin_text=stdin,
+        self._run = Run(cmd, env=env_for(api_key), cwd=task.workdir or None, stdin_text=stdin,
                         timeout=task.timeout_s)
         self._pending: dict[str, ToolCall] = {}
         self._gen = self._events()
@@ -324,12 +339,12 @@ class Stream:
         return res
 
 
-def stream(task: Task, model: str | None = None) -> Stream:
-    return Stream(task, model)
+def stream(task: Task, model: str | None = None, profile: dict | None = None) -> Stream:
+    return Stream(task, model, profile=profile)
 
 
-def run(task: Task, model: str | None = None) -> Result:
-    s = Stream(task, model, partial=False)
+def run(task: Task, model: str | None = None, profile: dict | None = None) -> Result:
+    s = Stream(task, model, partial=False, profile=profile)
     try:
         for _ in s:
             pass

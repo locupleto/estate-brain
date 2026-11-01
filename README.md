@@ -14,7 +14,7 @@ Phase 2 — production callers move onto the library one at a time, still on
 Claude: Photo-OCR and the Scriptorium (2026-11-01), then the Bastion,
 Observatory, Academy, the speech fast brain and (v0.1.6, `brain run`) the bot wrapper.
 Phase 3 (v0.1.7): the central registry. Phase 4 (v0.1.8): the `messages`
-engine, a model's HTTP API called directly.
+engine, a model's HTTP API called directly; (v0.1.12) the fallback chain.
 
 Apps pin it by tag, like excalicore:
 
@@ -54,6 +54,7 @@ same as before.
 |---|---|---|
 | `claude-code` | the `claude` CLI, stripped of user settings | subscription login (API keys are removed from its env) |
 | `opencode` | `opencode run`, fully isolated per run | provider keys from the environment |
+| `claude-code` + `key` | the same CLI on a metered key (the fallback `claude-api-cli`): the profile's `keyring:` key is put in its env, on purpose | the Console key |
 | `messages` | a model's HTTP API: Anthropic Messages, or OpenAI-compatible `/chat/completions` (OpenAI, Gemini, xAI, Perplexity, OpenRouter, Ollama, LM Studio, mlx-lm) | the profile's `keyring:<name>` from the estate keyring next to the registry, else the provider's usual environment variable; none for a local `base_url` |
 
 The `messages` engine has no tools of its own: it runs a model call with a
@@ -66,6 +67,17 @@ run without them. Where a call goes comes from the profile (`api`,
 sonar). Its `stream()` yields Messages-API events for every provider (the
 OpenAI stream is translated). Cost is computed from Anthropic list prices;
 other providers report none. `temperature` is never sent.
+
+### Fallback
+
+`[defaults] fallback = [...]` (or `fallback =` on an assignment; `[]` = none)
+names profiles to try, in order, when the chosen one fails **before
+acting**: no tool call at all, and the failure is the provider's (overloaded,
+5xx, usage or rate limit, login, unreachable). Never a timeout, a spend
+ceiling, a refusal or a bad request. A fallback that cannot run the task
+(the `messages` engine and a tool task) is skipped. Each attempt is its own
+ledger line; the fallback's has `source: "fallback"`. Only `run()` falls
+back: a stream has already been read by its caller.
 
 ## Use
 

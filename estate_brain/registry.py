@@ -157,3 +157,31 @@ def choose(doc: dict, app: str, role: str, tier: str, model: str | None,
         spec = {k: p[k] for k in ("api", "base_url", "key", "provider", "tiers") if k in p}
         return Choice(name, p["engine"], m, t, p.get("key"), str(doc.get("version", "")), spec)
     return None
+
+
+_ALIAS_TIER = {"haiku": "fast", "sonnet": "standard", "opus": "deep"}
+
+
+def fallbacks(doc: dict, app: str, role: str, tier: str, model: str | None) -> list[Choice]:
+    """The profiles to try, in order, when the chosen one fails before acting:
+    the assignment's `fallback` (app.role, else app), else [defaults]
+    fallback; a string or a list of profile names, [] = none. Disabled or
+    unknown profiles are skipped. A caller's Claude alias picks the tier on a
+    profile that is not claude-code (opus -> deep)."""
+    assign = doc.get("assign") or {}
+    names = None
+    for key in ([f"{app}.{role}"] if app and role else []) + ([app] if app else []):
+        if key in assign and "fallback" in (assign[key] or {}):
+            names = assign[key]["fallback"]
+            break
+    if names is None:
+        names = (doc.get("defaults") or {}).get("fallback") or []
+    if isinstance(names, str):
+        names = [names]
+    t = _ALIAS_TIER.get((model or "").lower(), tier)
+    out = []
+    for name in names:
+        c = choose({**doc, "assign": {}}, "", "", t, model, name)
+        if c and c.profile == name:
+            out.append(c)
+    return out

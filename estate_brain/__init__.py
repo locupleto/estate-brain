@@ -12,33 +12,77 @@ Phase 3.
 
 from __future__ import annotations
 
+import re
+
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.11"
+__version__ = "0.1.12"
+
+
+# Failures worth one more try on a fallback profile: the provider or the
+# subscription could not serve the call (overloaded, outage, usage or rate
+# limit, login). Never a timeout, a spend ceiling, a refusal or a bad request.
+_FALLBACK_WORTHY = re.compile(
+    r"overloaded|API Error: 5\d\d|\b(500|502|503|529)\b|Internal server error|"
+    r"usage limit|limit reached|hit your limit|rate.?limit|\b429\b|"
+    r"not logged in|OAuth token|authentication_error|invalid api key|\b401\b|"
+    r"claude binary not found|connection to .* failed|stream broke", re.I)
+
+
+def fallback_worthy(res: Result) -> bool:
+    """A failed call that may be retried elsewhere: nothing acted (no tool
+    call at all, so nothing can run twice) and the failure is the provider's."""
+    if res.ok or res.tool_calls or res.error in ("timeout", "refusal"):
+        return False
+    if "budget" in res.error:
+        return False
+    return bool(_FALLBACK_WORTHY.search(f"{res.error}\n{res.text}\n{res.raw_tail}"))
+
+
+def _run_one(task: Task, r) -> Result:
+    from . import engines
+    try:
+        impl = engines.get(r.engine)
+    except ValueError as e:
+        return Result(engine=r.engine, model=r.model or "", error=str(e))
+    t, err = _adapt(_with_tier(task, r), r.engine)
+    if err:
+        return Result(engine=r.engine, model=r.model or "", error=err)
+    return impl.run(t, r.model, **_engine_kw(r))
 
 
 def run(task: Task, engine: str | None = None, model: str | None = None,
         ledger: bool = True) -> Result:
-    from . import engines
+    """One call. When the registry's profile fails before acting (see
+    `fallback_worthy`), the registry's fallback profiles are tried in order;
+    each attempt is its own ledger line (the fallback's with source
+    "fallback"). Only `run()` falls back: a stream has already been read."""
     from .ledger import record
-    from .resolve import resolve_full
+    from .resolve import _usable, resolve_full
     r = resolve_full(task, engine, model)
-    task = _with_tier(task, r)
-    try:
-        impl = engines.get(r.engine)
-    except ValueError as e:
-        res = Result(engine=r.engine, model=r.model or "", error=str(e))
-    else:
-        task, err = _adapt(task, r.engine)
-        res = Result(engine=r.engine, model=r.model or "", error=err) if err \
-            else impl.run(task, r.model, **_engine_kw(r))
+    res = _run_one(task, r)
     if ledger:
-        record(task, res, r)
+        record(_with_tier(task, r), res, r)
+    for fb in r.fallbacks:
+        if not fallback_worthy(res):
+            break
+        if not _usable(fb.engine, False, task):
+            continue                      # e.g. a tool task cannot run on the messages engine
+        first_error = res.error
+        res = _run_one(task, fb)
+        if ledger:
+            record(_with_tier(task, fb), res, fb)
+        if not res.ok:
+            res.error = f"{res.error} (fallback {fb.profile}, after: {first_error})"[:400]
     return res
 
 
 def _engine_kw(r) -> dict:
-    return {"profile": r.spec} if r.engine == "messages" and r.spec else {}
+    # The messages engine needs its profile (where to send the call); a
+    # claude-code profile only when it carries a key (the metered CLI).
+    if r.spec and (r.engine == "messages" or (r.engine == "claude-code" and r.spec.get("key"))):
+        return {"profile": r.spec}
+    return {}
 
 
 def _adapt(task: Task, engine: str):
@@ -129,4 +173,5 @@ def stream(task: Task, engine: str | None = None, model: str | None = None,
     return _Recorded(impl.stream(task, model, **_engine_kw(r)), task, ledger, r)
 
 
-__all__ = ["Task", "ToolPolicy", "ToolCall", "Result", "run", "stream", "__version__"]
+__all__ = ["Task", "ToolPolicy", "ToolCall", "Result", "run", "stream", "fallback_worthy",
+           "__version__"]

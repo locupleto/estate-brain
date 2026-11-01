@@ -202,7 +202,7 @@ def _run_once(task: Task, model: str, exe: str, prompt: str) -> Result:
     return res
 
 
-def run(task: Task, model: str | None = None) -> Result:
+def run(task: Task, model: str | None = None, profile: dict | None = None) -> Result:
     model = model or task.model
     if not model:
         return Result(engine=NAME, error="opencode needs an explicit provider/model")

@@ -22,7 +22,7 @@ claude-code one.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .task import Task
 
@@ -38,6 +38,9 @@ class Resolution:
     tier: str | None = None     # the registry's tier, when it overrides the task's
     version: str = ""           # registry version the choice came from
     spec: dict | None = None    # the profile's engine settings (registry only)
+    # What to try when this one fails before acting (registry only; run()
+    # decides eligibility). Each is a Resolution with source "fallback".
+    fallbacks: list = field(default_factory=list)
 
 
 def _app_key(app: str) -> str:
@@ -78,9 +81,13 @@ def resolve_full(task: Task, engine: str | None = None, model: str | None = None
     if doc:
         c = registry.choose(doc, task.app, task.role, task.tier, model or task.model, forced)
         if c and _usable(c.engine, need_stream, task):
+            fbs = [Resolution(f.engine, f.model, "fallback", f.profile,
+                              f.tier if f.tier != task.tier else None, f.version, f.spec or None)
+                   for f in registry.fallbacks(doc, task.app, task.role, task.tier, model or task.model)
+                   if f.profile != c.profile]
             return Resolution(c.engine, c.model, "registry" if src == "live" else "registry-cache",
                               c.profile, c.tier if c.tier != task.tier else None, c.version,
-                              getattr(c, "spec", None) or None)
+                              getattr(c, "spec", None) or None, fbs)
     return Resolution(DEFAULT_ENGINE, model or task.model, "default")
 
 
