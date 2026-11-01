@@ -53,7 +53,7 @@ same as before.
 | Engine | What it drives | Auth |
 |---|---|---|
 | `claude-code` | the `claude` CLI, stripped of user settings | subscription login (API keys are removed from its env) |
-| `opencode` | `opencode run`, fully isolated per run | provider keys from the environment |
+| `opencode` | `opencode run`, fully isolated per run; the model catalogue is the engine's daily copy of models.dev (`~/.estate-brain/opencode-models.json`); `budget_usd` is enforced per step; with `persist` the event stream is kept as the transcript (`~/.estate-brain/opencode-sessions/`) | the profile's `keyring:` key, set as the provider's own variable; else the provider keys in the environment |
 | `claude-code` + `key` | the same CLI on a metered key (the fallback `claude-api-cli`): the profile's `keyring:` key is put in its env, on purpose | the Console key |
 | `messages` | a model's HTTP API: Anthropic Messages, or OpenAI-compatible `/chat/completions` (OpenAI, Gemini, xAI, Perplexity, OpenRouter, Ollama, LM Studio, mlx-lm) | the profile's `keyring:<name>` from the estate keyring next to the registry, else the provider's usual environment variable; none for a local `base_url` |
 

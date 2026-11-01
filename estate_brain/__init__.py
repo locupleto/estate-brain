@@ -16,7 +16,7 @@ import re
 
 from .task import Result, Task, ToolCall, ToolPolicy
 
-__version__ = "0.1.13"
+__version__ = "0.1.14"
 
 
 # Failures worth one more try on a fallback profile: the provider or the
@@ -78,9 +78,11 @@ def run(task: Task, engine: str | None = None, model: str | None = None,
 
 
 def _engine_kw(r) -> dict:
-    # The messages engine needs its profile (where to send the call); a
-    # claude-code profile only when it carries a key (the metered CLI).
-    if r.spec and (r.engine == "messages" or (r.engine == "claude-code" and r.spec.get("key"))):
+    # The messages and opencode engines need their profile (where to send
+    # the call, which key, the tier models); a claude-code profile only when
+    # it carries a key (the metered CLI).
+    if r.spec and (r.engine in ("messages", "opencode")
+                   or (r.engine == "claude-code" and r.spec.get("key"))):
         return {"profile": r.spec}
     return {}
 
