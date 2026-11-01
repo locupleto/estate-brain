@@ -207,6 +207,12 @@ class MessagesEngineTest(unittest.TestCase):
             res = M.run(Task(prompt="x", tools=BARE), "gpt-x", profile=prof)
         self.assertIn("no API key", res.error)
 
+    def test_cost_knows_dated_ids_and_admits_ignorance(self):
+        u = {"input_tokens": 1_000_000, "output_tokens": 1_000_000}
+        self.assertEqual(M.cost("claude-haiku-4-5-20251001", u), 6.0)
+        self.assertEqual(M.cost("claude-opus-5-5", u), 24.0)
+        self.assertIsNone(M.cost("gpt-5.4-mini", u))
+
     def test_routing_by_model_prefix(self):
         r = M.route("gpt-5.5")
         self.assertEqual((r["url"], r["keyring"], r["env"]),

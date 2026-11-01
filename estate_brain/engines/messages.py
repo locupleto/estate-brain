@@ -35,6 +35,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import socket
 import threading
 import time
@@ -78,7 +79,13 @@ PRICES = {
     "claude-sonnet-5-5": (2.0, 10.0, 0.20),
     "claude-sonnet-5": (2.0, 10.0, 0.20),
     "claude-haiku-5-5": (0.10, 0.50, 0.01),
+    "claude-opus-4-8": (5.0, 25.0, 0.50),
+    "claude-opus-4-7": (5.0, 25.0, 0.50),
+    "claude-opus-4-6": (5.0, 25.0, 0.50),
+    "claude-sonnet-4-6": (3.0, 15.0, 0.30),
+    "claude-haiku-4-5": (1.0, 5.0, 0.10),
 }
+_DATED = re.compile(r"-\d{8}$")          # claude-haiku-4-5-20251001 -> claude-haiku-4-5
 
 
 def refuse(task: Task) -> str | None:
@@ -325,7 +332,7 @@ def translate_openai(frames):
 
 
 def cost(model: str, u: dict) -> float | None:
-    p = PRICES.get(model)
+    p = PRICES.get(model) or PRICES.get(_DATED.sub("", model or ""))
     if not p:
         return None
     return round((u.get("input_tokens", 0) * p[0] + u.get("output_tokens", 0) * p[1]
