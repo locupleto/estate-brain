@@ -133,6 +133,20 @@ class FallbackTest(unittest.TestCase):
         self.assertEqual(len(cc.calls), 1)
 
 
+class MissingBinaryTest(unittest.TestCase):
+    def test_a_missing_binary_is_an_error_result_not_an_exception(self):
+        with mock.patch.dict(os.environ, {"CLAUDE_BIN": "/nonexistent/claude"}):
+            res = claude_code.run(Task(prompt="x"), "haiku")
+        self.assertEqual(res.error, "claude binary not found")
+        self.assertTrue(estate_brain.fallback_worthy(res))
+
+    def test_a_binary_gone_at_spawn_time_is_an_error_result(self):
+        with mock.patch.object(claude_code, "find_binary", lambda *a: "/nonexistent/claude"):
+            res = claude_code.run(Task(prompt="x"), "haiku")
+        self.assertTrue(res.error.startswith("claude binary not found"))
+        self.assertTrue(estate_brain.fallback_worthy(res))
+
+
 class MeteredCliTest(unittest.TestCase):
     def test_the_key_goes_in_only_when_the_profile_names_one(self):
         with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-leak"}):

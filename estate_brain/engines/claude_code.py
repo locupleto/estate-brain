@@ -250,8 +250,13 @@ class Stream:
                 self._gen = iter(())
                 return
         cmd, stdin = command(task, model, exe, partial=partial)
-        self._run = Run(cmd, env=env_for(api_key), cwd=task.workdir or None, stdin_text=stdin,
-                        timeout=task.timeout_s)
+        try:
+            self._run = Run(cmd, env=env_for(api_key), cwd=task.workdir or None, stdin_text=stdin,
+                            timeout=task.timeout_s)
+        except OSError as e:     # the binary vanished between lookup and spawn (an upgrade)
+            self.result.error = f"claude binary not found ({e.strerror})"
+            self._gen = iter(())
+            return
         self._pending: dict[str, ToolCall] = {}
         self._gen = self._events()
 

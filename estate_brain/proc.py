@@ -132,7 +132,9 @@ class Run:
 def find_binary(name: str, env_var: str, candidates: tuple[str, ...]) -> str | None:
     explicit = os.environ.get(env_var)
     if explicit:
-        return explicit
+        # A path that is not there must read as "not found" (an error Result
+        # the fallback chain can act on), never as a spawn exception later.
+        return explicit if os.access(os.path.expanduser(explicit), os.X_OK) else None
     found = shutil.which(name)
     if found:
         return found
