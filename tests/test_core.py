@@ -87,6 +87,22 @@ class ClaudeTranslationTest(unittest.TestCase):
         p = opencode.config_for(t, "openai/x")["permission"]["edit"]
         self.assertEqual(p["USER.md"], "allow")
 
+    def test_mcp_only_task_replaces_the_system_prompt(self):
+        t = Task(prompt="p", system="persona", tools=ToolPolicy(files=False, mcp_servers={"cal": CAL}))
+        cmd, _ = claude_code.command(t, "haiku", "claude", partial=True)
+        self.assertEqual(cmd[cmd.index("--tools") + 1], "")
+        self.assertEqual(cmd[cmd.index("--system-prompt") + 1], "persona")
+        self.assertNotIn("--append-system-prompt", cmd)
+        self.assertIn("mcp__cal", json.loads(cmd[cmd.index("--settings") + 1])["permissions"]["allow"])
+        self.assertIn("cal", json.loads(cmd[cmd.index("--mcp-config") + 1])["mcpServers"])
+        self.assertIn("--include-partial-messages", cmd)
+
+    def test_stream_on_an_engine_that_cannot(self):
+        from estate_brain import stream
+        s = stream(Task(prompt="p"), engine="opencode", model="openai/x", ledger=False)
+        self.assertEqual(list(s), [])
+        self.assertIn("cannot stream", s.close().error)
+
     def test_session_persistence_is_opt_in(self):
         cmd, _ = claude_code.command(Task(prompt="p", tools=ToolPolicy(files=False)), "haiku", "claude")
         self.assertIn("--no-session-persistence", cmd)
